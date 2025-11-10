@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Book Distribution Dashboard</title>
+</head>
+<body>
+  <h1>Book Distribution Dashboard</h1>
+  <button id="loadBtn">🔄 Load Books</button>
+  <pre id="output"></pre>
+
+  <script>
+    const backendUrl = "https://script.google.com/macros/s/AKfycbylX6JlsvGY9dRzBzFJ960Ng1ANuWWPv9ILIq44InOsIqPLDkGisHzODNuT1qjkTc0iNA/exec?action=data";
+
+    document.getElementById("loadBtn").addEventListener("click", async () => {
+      const output = document.getElementById("output");
+      output.textContent = "Loading...";
+      try {
+        const res = await fetch(backendUrl);
+        const data = await res.json();
+        output.textContent = JSON.stringify(data, null, 2);
+      } catch (err) {
+        output.textContent = "Error: " + err;
+      }
+    });
+  </script>
+</body>
+</html>
