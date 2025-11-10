@@ -1,28 +1,187 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <title>Book Distribution Dashboard</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    h1,h2 { margin-bottom: 10px; }
+    table { border-collapse: collapse; width: 100%; margin-top: 10px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+    th { cursor: pointer; background-color: #f2f2f2; }
+    select, input, button { margin: 5px; padding: 5px; }
+    .highlight { background-color: #dff0d8; }
+    .section { margin-bottom: 30px; border: 1px solid #ddd; padding: 15px; border-radius: 8px; }
+    #loading { display: none; }
+  </style>
 </head>
 <body>
-  <h1>Book Distribution Dashboard</h1>
-  <button id="loadBtn">🔄 Load Books</button>
-  <pre id="output"></pre>
 
-  <script>
-    const backendUrl = "https://script.google.com/macros/s/AKfycbylX6JlsvGY9dRzBzFJ960Ng1ANuWWPv9ILIq44InOsIqPLDkGisHzODNuT1qjkTc0iNA/exec?action=data";
+<h1>📚 Book Distribution Dashboard</h1>
 
-    document.getElementById("loadBtn").addEventListener("click", async () => {
-      const output = document.getElementById("output");
-      output.textContent = "Loading...";
-      try {
-        const res = await fetch(backendUrl);
-        const data = await res.json();
-        output.textContent = JSON.stringify(data, null, 2);
-      } catch (err) {
-        output.textContent = "Error: " + err;
-      }
+<!-- ---------------- Book Distribution Section ---------------- -->
+<div class="section" id="distributionSection">
+  <h2>Book Distribution</h2>
+  <label>Vendor:</label>
+  <select id="vendorFilter"><option value="">All</option></select>
+
+  <label>Library Type:</label>
+  <select id="libTypeFilter"><option value="">All</option></select>
+
+  <label>Search Title:</label>
+  <input type="text" id="searchInput" placeholder="Type title to search">
+
+  <button id="loadDistributionBtn">🔄 Load Books</button>
+
+  <table id="booksTable">
+    <thead>
+      <tr>
+        <th data-column="sno">S.No</th>
+        <th data-column="title">Title</th>
+        <th data-column="vendor">Vendor</th>
+        <th data-column="libType">Library Type</th>
+        <th data-column="libraryName">Library</th>
+        <th data-column="setValue">Set</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+</div>
+
+<!-- ---------------- Books to Send Section ---------------- -->
+<div class="section" id="sendSection">
+  <h2>📦 Books to Send</h2>
+  <label>Library:</label>
+  <select id="sendLibrarySelect"><option value="">Select Library</option></select>
+
+  <label>Set:</label>
+  <select id="sendSetSelect"><option value="">Select Set</option></select>
+
+  <button id="generatePdfBtn">🖨 Generate PDF</button>
+  <div id="pdfResult"></div>
+</div>
+
+<div id="loading">⏳ Loading...</div>
+
+<script>
+  const backendBaseUrl = "https://script.google.com/macros/s/AKfycbylX6JlsvGY9dRzBzFJ960Ng1ANuWWPv9ILIq44InOsIqPLDkGisHzODNuT1qjkTc0iNA/exec";
+
+  let distributionData = [];
+  let vendors = [];
+  let libTypes = [];
+
+  // ------------------ Utility ------------------
+  async function fetchJSON(url, params = {}) {
+    try {
+      const res = await fetch(url, params);
+      return await res.json();
+    } catch (err) {
+      console.error("Fetch error:", err);
+      alert("Error connecting to backend: " + err);
+    }
+  }
+
+  // ------------------ Load Vendors & Library Types ------------------
+  async function loadFilters() {
+    vendors = await fetchJSON(`${backendBaseUrl}?action=getVendors`) || [];
+    libTypes = await fetchJSON(`${backendBaseUrl}?action=getLibraries`) || [];
+
+    const vendorSelect = document.getElementById("vendorFilter");
+    vendorSelect.innerHTML = `<option value="">All</option>` + vendors.map(v=>`<option>${v}</option>`).join("");
+
+    const libSelect = document.getElementById("libTypeFilter");
+    libSelect.innerHTML = `<option value="">All</option>` + libTypes.map(l=>`<option>${l}</option>`).join("");
+
+    const sendLibSelect = document.getElementById("sendLibrarySelect");
+    sendLibSelect.innerHTML = `<option value="">Select Library</option>` + libTypes.map(l=>`<option>${l}</option>`).join("");
+
+    const sendSetSelect = document.getElementById("sendSetSelect");
+    sendSetSelect.innerHTML = `<option value="">Select Set</option><option>SET1</option><option>SET2</option><option>SET3</option>`;
+  }
+
+  // ------------------ Load Distribution Data ------------------
+  async function loadDistribution() {
+    document.getElementById("loading").style.display = "block";
+    const res = await fetchJSON(`${backendBaseUrl}?action=getFilteredResults`);
+    if(res && Array.isArray(res)) {
+      distributionData = res;
+      renderTable();
+    }
+    document.getElementById("loading").style.display = "none";
+  }
+
+  // ------------------ Render Table ------------------
+  function renderTable(sortColumn=null, asc=true) {
+    const tbody = document.querySelector("#booksTable tbody");
+    const vendorVal = document.getElementById("vendorFilter").value.toLowerCase();
+    const libVal = document.getElementById("libTypeFilter").value.toLowerCase();
+    const searchVal = document.getElementById("searchInput").value.toLowerCase();
+
+    let filtered = distributionData.filter(book=>{
+      return (!vendorVal || (book.vendor||"").toLowerCase() === vendorVal) &&
+             (!libVal || (book.libType||"").toLowerCase() === libVal) &&
+             (!searchVal || (book.title||"").toLowerCase().includes(searchVal));
     });
-  </script>
+
+    if(sortColumn){
+      filtered.sort((a,b)=>{
+        if(a[sortColumn] < b[sortColumn]) return asc? -1:1;
+        if(a[sortColumn] > b[sortColumn]) return asc? 1:-1;
+        return 0;
+      });
+    }
+
+    tbody.innerHTML = filtered.length ? filtered.map(b=>`
+      <tr>
+        <td>${b.sno}</td>
+        <td>${b.title}</td>
+        <td>${b.vendor}</td>
+        <td>${b.libType}</td>
+        <td>${b.libraryName}</td>
+        <td>${b.setValue||""}</td>
+      </tr>
+    `).join("") : `<tr><td colspan='6'>No records found</td></tr>`;
+  }
+
+  // ------------------ Sorting ------------------
+  document.querySelectorAll("#booksTable th").forEach(th=>{
+    let asc = true;
+    th.addEventListener("click", ()=>{
+      const col = th.dataset.column;
+      renderTable(col, asc);
+      asc = !asc;
+    });
+  });
+
+  // ------------------ Generate PDF ------------------
+  document.getElementById("generatePdfBtn").addEventListener("click", async ()=>{
+    const libraryName = document.getElementById("sendLibrarySelect").value;
+    const setValue = document.getElementById("sendSetSelect").value;
+
+    if(!libraryName || !setValue) return alert("Select Library and Set!");
+
+    document.getElementById("pdfResult").innerHTML = "⏳ Generating PDF...";
+    try {
+      const res = await fetchJSON(`${backendBaseUrl}?action=generatePdf&libraryName=${encodeURIComponent(libraryName)}&setValue=${encodeURIComponent(setValue)}`);
+      if(res && res.url){
+        document.getElementById("pdfResult").innerHTML = `<a href="${res.url}" target="_blank">📄 View PDF: ${res.name}</a>`;
+      } else {
+        document.getElementById("pdfResult").innerHTML = "Error generating PDF.";
+      }
+    } catch(err){
+      document.getElementById("pdfResult").innerHTML = "Error: " + err;
+    }
+  });
+
+  // ------------------ Event Listeners ------------------
+  document.getElementById("loadDistributionBtn").addEventListener("click", loadDistribution);
+  document.getElementById("vendorFilter").addEventListener("change", ()=>renderTable());
+  document.getElementById("libTypeFilter").addEventListener("change", ()=>renderTable());
+  document.getElementById("searchInput").addEventListener("input", ()=>renderTable());
+
+  // ------------------ Init ------------------
+  loadFilters();
+</script>
+
 </body>
 </html>
