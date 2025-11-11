@@ -1,187 +1,364 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ta">
 <head>
-  <meta charset="UTF-8">
-  <title>Book Distribution Dashboard</title>
-  <style>
-    body { font-family: Arial, sans-serif; margin: 20px; }
-    h1,h2 { margin-bottom: 10px; }
-    table { border-collapse: collapse; width: 100%; margin-top: 10px; }
-    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
-    th { cursor: pointer; background-color: #f2f2f2; }
-    select, input, button { margin: 5px; padding: 5px; }
-    .highlight { background-color: #dff0d8; }
-    .section { margin-bottom: 30px; border: 1px solid #ddd; padding: 15px; border-radius: 8px; }
-    #loading { display: none; }
-  </style>
+<meta charset="UTF-8">
+<base target="_top">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BOOK DISTRIBUTION SYSTEM</title>
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Tamil:wght@300;400;600;700&display=swap');
+
+  body {
+    font-family: 'Noto Sans Tamil', sans-serif;
+    margin: 0;
+    padding: 12px;
+    max-width: 1100px;
+    margin-left: auto;
+    margin-right: auto;
+    background: linear-gradient(to bottom,
+        rgba(255,255,255,0.95),
+        rgba(245,245,255,0.95)),
+      url("https://upload.wikimedia.org/wikipedia/commons/thumb/a/a2/Shakespeare.jpg/600px-Shakespeare.jpg");
+    background-size: cover;
+    background-position: center;
+  }
+
+  .header { text-align: center; margin-bottom: 18px; padding: 14px; background: rgba(255,255,255,0.85); border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.20); }
+  .header-title { font-size: 28px; color: #8B0000; font-weight: 700; }
+  .header-sub { font-size: 18px; margin-top: 6px; color: #003366; font-weight: 600; }
+
+  .section { background: rgba(255,255,255,0.90); padding: 16px; border-radius: 14px; margin-top: 16px; box-shadow: 0 4px 18px rgba(0,0,0,0.22); }
+  h3 { margin: 0 0 10px 0; font-weight: 700; }
+  label { margin-top: 8px; font-weight: 600; display:block; }
+  select,input,button,textarea { width: 100%; padding: 9px; font-size: 14px; border-radius: 8px; border: 1px solid #aaa; box-sizing: border-box; }
+  button { cursor: pointer; border: none; font-weight: 700; }
+  .btn.primary { background: #8B0000; color:white; }
+  .btn.primary:hover { background:#B30000; }
+  .btn.secondary { background:#003366; color:white; }
+  .btn.secondary:hover { background:#1a578a; }
+
+  .choose-container { display:flex; justify-content: center; flex-wrap: wrap; gap:16px; margin-top:14px; }
+  .choose-box { width:260px; text-align:center; }
+
+  table { width:100%; border-collapse:collapse; margin-top:10px; background:white; opacity:0; transition: opacity 0.5s ease-in; }
+  table.visible { opacity:1; }
+  th,td { border:1px solid #d0d0d0; padding:6px; font-size:13px; }
+  th { background:#eee; text-align:center; }
+  tr.saved { background-color: #c6f6d5 !important; transition: background-color 1s ease; }
+
+  .book-loader { width: 50px; height: 34px; display:none; margin:auto; position:relative; }
+  .book-loader::before, .book-loader::after { content:""; width:24px; height:34px; top:0; position:absolute; background:#8B0000; animation:flip 1s infinite; border-radius:4px; }
+  .book-loader::after { left:24px; background:#003366; animation-delay:0.45s; }
+  @keyframes flip { from { transform: rotateY(0deg); } to { transform: rotateY(-180deg); } }
+
+  .modal { display:none; position:fixed; left:0; top:0; right:0; bottom:0; background:rgba(0,0,0,0.50); align-items:center; justify-content:center; z-index:9999; }
+  .modal .card { background:white; width:100%; max-width:520px; padding:16px; border-radius:12px; box-shadow:0 4px 12px rgba(0,0,0,0.40); }
+
+  footer { position:fixed; bottom:12px; left:0; right:0; text-align:center; pointer-events:none; }
+  footer button { width:160px; pointer-events:auto; }
+
+  @media(max-width:820px){ table { font-size:11px; } .choose-container { flex-direction:column; } }
+</style> 
 </head>
+
 <body>
 
-<h1>📚 Book Distribution Dashboard</h1>
-
-<!-- ---------------- Book Distribution Section ---------------- -->
-<div class="section" id="distributionSection">
-  <h2>Book Distribution</h2>
-  <label>Vendor:</label>
-  <select id="vendorFilter"><option value="">All</option></select>
-
-  <label>Library Type:</label>
-  <select id="libTypeFilter"><option value="">All</option></select>
-
-  <label>Search Title:</label>
-  <input type="text" id="searchInput" placeholder="Type title to search">
-
-  <button id="loadDistributionBtn">🔄 Load Books</button>
-
-  <table id="booksTable">
-    <thead>
-      <tr>
-        <th data-column="sno">S.No</th>
-        <th data-column="title">Title</th>
-        <th data-column="vendor">Vendor</th>
-        <th data-column="libType">Library Type</th>
-        <th data-column="libraryName">Library</th>
-        <th data-column="setValue">Set</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
+<div class="header">
+  <div class="header-title">மாவட்ட மைய நூலகம், திண்டுக்கல்</div>
+  <div class="header-sub">📚 புதிய நூல்கள் பகிர்மானம்</div>
 </div>
 
-<!-- ---------------- Books to Send Section ---------------- -->
-<div class="section" id="sendSection">
-  <h2>📦 Books to Send</h2>
-  <label>Library:</label>
-  <select id="sendLibrarySelect"><option value="">Select Library</option></select>
-
-  <label>Set:</label>
-  <select id="sendSetSelect"><option value="">Select Set</option></select>
-
-  <button id="generatePdfBtn">🖨 Generate PDF</button>
-  <div id="pdfResult"></div>
+<div id="choose" class="section" style="text-align:center;">
+  <h3>நீங்கள் எந்த பணியை செய்கிறீர்கள்?</h3>
+  <div class="choose-container">
+    <div class="choose-box">
+      <button class="btn primary" onclick="enterMode('dashboard')">📌 புத்தகங்களைப் பிரிக்கிறீர்களா?</button>
+    </div>
+    <div class="choose-box">
+      <button class="btn secondary" onclick="enterMode('send')">🚚 நூலகங்களுக்கு அனுப்புகிறீர்களா?</button>
+    </div>
+  </div>
 </div>
 
-<div id="loading">⏳ Loading...</div>
+<!-- Dashboard Section -->
+<div id="dashboardSection" class="section" style="display:none;">
+  <h3>📌 Book Distribution — Dashboard</h3>
+  <label>பதிப்பகம் தேடுக</label>
+  <input id="vendorSearch" placeholder="PUBLISHER NAME (Full/Part)" oninput="filterVendors()">
+  <div id="vendorLoader" class="book-loader"></div>
+
+  <label>பதிப்பகம் பெயர்</label>
+  <select id="vendorSelect"></select>
+
+  <label>Library Type</label>
+  <select id="libTypeSelect">
+    <option value="">-- Select --</option>
+    <option value="Full Time Branch Library - FTL">Full Time Branch Library - FTL</option>
+    <option value="Branch Library - BL">Branch Library - BL</option>
+    <option value="Village Library - VL">Village Library - VL</option>
+  </select>
+
+  <button class="btn primary" style="margin-top:8px;" onclick="confirmApply()">▶ Load Titles</button>
+  <div id="applyLoader" class="book-loader"></div>
+
+  <label style="margin-top:12px;">Select Title</label>
+  <select id="titleSelect"></select>
+
+  <button class="btn secondary" id="applyTitleBtn" onclick="applyTitle()" style="margin-top:8px;">Load Libraries</button>
+  <div id="applyTitleLoader" class="book-loader"></div>
+
+  <div id="tableContainer"></div>
+
+  <div style="margin-top:10px; display:flex; gap:10px;">
+    <select id="bulkSet" style="width:150px;">
+      <option value="">(Select ALL)</option>
+      <option>SET1</option><option>SET2</option><option>SET3</option>
+      <option>SET4</option><option>SET5</option><option>SET6</option>
+      <option>SET7</option><option>SET8</option><option>SET9</option><option>SET10</option>
+    </select>
+    <button class="btn secondary" onclick="applyBulk()">Bulk Apply</button>
+    <button class="btn primary" id="saveBtn" onclick="saveSelected()">Save</button>
+  </div>
+ 
+  <div id="status" style="margin-top:8px; font-size:14px;"></div>
+</div>
+
+<!-- Send Section -->
+<div id="sendSection" class="section" style="display:none;">
+  <h3>🚚 Books to Send</h3>
+
+  <label>Library</label>
+  <select id="librarySelect"></select>
+
+  <label>Select SET</label>
+  <select id="setSelect">
+    <option value="">-- Select --</option>
+    <option>SET1</option> <option>SET2</option> <option>SET3</option>
+    <option>SET4</option> <option>SET5</option> <option>SET6</option>
+    <option>SET7</option> <option>SET8</option> <option>SET9</option> <option>SET10</option>
+  </select>
+
+  <button class="btn primary" style="margin-top:8px;" onclick="openSendModal()">Generate PDF</button>
+
+  <div id="genPdfLoader" class="book-loader"></div>
+  <div id="genStatus" style="margin-top:8px;"></div>
+  <div id="pdfLink" style="margin-top:6px;"></div>
+</div>
+
+<!-- Modals -->
+<div id="sendModal" class="modal">
+  <div class="card">
+    <h3>📄 PDF Next Step</h3>
+    <p>Choose option:</p>
+    <button class="btn primary" onclick="generatePdfThenOpen()">🖨 Print PDF</button>
+    <button class="btn secondary" onclick="prepareEmail()">📩 Send as Email</button>
+    <div id="sendLoader" class="book-loader"></div>
+    <button class="btn" onclick="closeSendModal()">Cancel</button>
+  </div>
+</div>
+
+<div id="emailModal" class="modal">
+  <div class="card">
+    <h3>📩 Email PDF Link</h3>
+    <label>Recipient Email</label>
+    <input id="recipientEmail">
+    <label>Subject</label>
+    <input id="emailSubject">
+    <label>Message</label>
+    <textarea id="emailBody" rows="6"></textarea>
+    <button class="btn primary" onclick="confirmSendEmail()">Send</button>
+    <button class="btn" onclick="closeEmailModal()">Cancel</button>
+  </div>
+</div>
+
+<div id="infoModal" class="modal">
+  <div class="card">
+    <div id="infoText"></div>
+    <button class="btn" style="margin-top:10px;" onclick="closeInfoModal()">OK</button>
+  </div>
+</div>
+
+<footer>
+  <button class="btn secondary" onclick="goHome()">⬅ முதன்மை பக்கம்</button>
+</footer>
 
 <script>
-  const backendBaseUrl = "https://script.google.com/macros/s/AKfycbyCfXOSO5GciMj7yz8MMa0IGIQPKsO-nMc25gJ4YcTHkTO2DrobQY2dILVd78Ou0P4dPg/exec";
+// ====================== Backend URL ======================
+const backendBaseUrl = "https://script.google.com/macros/s/AKfycbyCfXOSO5GciMj7yz8MMa0IGIQPKsO-nMc25gJ4YcTHkTO2DrobQY2dILVd78Ou0P4dPg/exec";
 
-  let distributionData = [];
-  let vendors = [];
-  let libTypes = [];
+// ====================== Global Variables ======================
+let allVendors=[], filteredRows=[], visibleRows=[], lastGeneratedFile=null, currentMode=null;
+let previousStates = [];
 
-  // ------------------ Utility ------------------
-  async function fetchJSON(url, params = {}) {
-    try {
-      const res = await fetch(url, params);
-      return await res.json();
-    } catch (err) {
-      console.error("Fetch error:", err);
-      alert("Error connecting to backend: " + err);
+// ====================== Utility Fetch Wrapper ======================
+async function fetchBackend(action, body={}) {
+  const url = `${backendBaseUrl}?action=${action}`;
+  const opts = {
+    method: body && Object.keys(body).length>0 ? 'POST' : 'GET',
+    headers: { 'Content-Type': 'application/json' },
+    body: body && Object.keys(body).length>0 ? JSON.stringify(body) : null
+  };
+  const resp = await fetch(url, opts);
+  if (!resp.ok) throw new Error(`Server error: ${resp.status}`);
+  return resp.json();
+}
+
+// ====================== Initial Load ======================
+window.onload = async () => {
+  try {
+    allVendors = await fetchBackend('getVendors');
+    renderVendorList(allVendors);
+
+    const libraries = await fetchBackend('getLibraries');
+    populateLibraries(libraries);
+  } catch(e) {
+    showInfo("Error loading data: "+e.message);
+  }
+};
+
+// ====================== Common Functions ======================
+function enterMode(m){
+  currentMode=m;
+  document.getElementById('choose').style.display='none';
+  document.getElementById('dashboardSection').style.display=(m==='dashboard'?'block':'none');
+  document.getElementById('sendSection').style.display=(m==='send'?'block':'none');
+}
+
+function goHome(){ 
+  document.getElementById('choose').style.display='block';
+  document.getElementById('dashboardSection').style.display='none';
+  document.getElementById('sendSection').style.display='none';
+  currentMode=null; 
+}
+
+function showInfo(m){ 
+  document.getElementById('infoText').innerText=m; 
+  document.getElementById('infoModal').style.display='flex'; 
+}
+function closeInfoModal(){ document.getElementById('infoModal').style.display='none'; }
+
+function renderVendorList(list){
+  const s=document.getElementById('vendorSelect'); s.innerHTML='<option value="">-- Select --</option>';
+  list.forEach(v=>{ const o=document.createElement('option'); o.value=v; o.textContent=v; s.appendChild(o); });
+}
+
+function filterVendors(){
+  const q = document.getElementById('vendorSearch').value.toLowerCase();
+  const loader = document.getElementById('vendorLoader');
+  loader.style.display = 'block';
+
+  setTimeout(() => {
+    const results = allVendors.filter(x => x.toLowerCase().includes(q));
+    renderVendorList(results);
+    loader.style.display = 'none';
+  }, 400);
+}
+
+function populateLibraries(list){
+  const s=document.getElementById('librarySelect'); s.innerHTML='<option value="">-- Select Library --</option>';
+  list.forEach(l=>{ const o=document.createElement('option'); o.value=l; o.textContent=l; s.appendChild(o); });
+}
+
+// ====================== Dashboard Functions ======================
+async function confirmApply(){
+  const vendor=document.getElementById('vendorSelect').value;
+  const libType=document.getElementById('libTypeSelect').value;
+  if(!vendor||!libType) return showInfo('Select Vendor & Library Type');
+  document.getElementById('applyLoader').style.display='block';
+  try{
+    await fetchBackend('saveFiltersToResultSheet',{vendor, libType});
+    setTimeout(fetchFilteredResults,700);
+  } catch(e){
+    showInfo('Error: '+e.message);
+    document.getElementById('applyLoader').style.display='none';
+  }
+}
+
+async function fetchFilteredResults(){
+  try{
+    const rows = await fetchBackend('getFilteredResultsFromResultSheet');
+    document.getElementById('applyLoader').style.display='none';
+    filteredRows = rows || [];
+    buildTitleDropdown(rows);
+  } catch(e){
+    showInfo('Error fetching rows: '+e.message);
+  }
+}
+
+function buildTitleDropdown(rows){
+  const s=document.getElementById('titleSelect');
+  s.innerHTML='<option value="">-- Select --</option>';
+  const uniq=[...new Set(rows.map(r=>r.title))];
+  uniq.forEach(t=>{ if(t){ const o=document.createElement('option'); o.value=t; o.textContent=t; s.appendChild(o); } });
+}
+
+function applyTitle(){
+  const t=document.getElementById('titleSelect').value;
+  if(!t) return showInfo('Select title');
+  visibleRows=filteredRows.filter(r=>r.title===t);
+  renderTable();
+  scrollToTable();
+}
+
+function renderTable(){
+  const c=document.getElementById('tableContainer');
+  if(!visibleRows.length){ c.innerHTML='<div>No rows found</div>'; return; }
+  let html = `<table class="visible">
+    <tr><th>Serial No.</th><th>DCL No.</th><th>Library Name</th><th>SET</th></tr>`;
+  visibleRows.forEach((r,i)=>{
+    html+=`<tr>
+      <td style="text-align:center;">${i+1}</td>
+      <td style="text-align:center;">${r.sno}</td>
+      <td>${r.libraryName}</td>
+      <td>
+        <select data-sno="${r.sno}" class="rowSet">
+          <option value="">--</option>
+          ${["SET1","SET2","SET3","SET4","SET5","SET6","SET7","SET8","SET9","SET10"].map(s=>`<option value="${s}">${s}</option>`).join('')}
+        </select>
+      </td>
+    </tr>`;
+  });
+  html+=`</table>`;
+  c.innerHTML=html;
+}
+
+function applyBulk(){ const v=document.getElementById('bulkSet').value; document.querySelectorAll('.rowSet').forEach(s=>s.value=v); }
+function scrollToTable(){ document.getElementById('tableContainer').scrollIntoView({behavior:'smooth',block:'start'}); }
+
+// ====================== Save ======================
+async function saveSelected(){
+  const buttons = document.getElementById('saveBtn');
+  const loader = document.getElementById('applyTitleLoader');
+  const status = document.getElementById('status');
+
+  const arr = [...document.querySelectorAll('.rowSet')]
+    .map(x => ({ sno: x.dataset.sno, setValue: x.value }))
+    .filter(a => a.setValue);
+
+  if (!arr.length) return showInfo('No SET values selected');
+
+  loader.style.display = 'block';
+  buttons.disabled = true;
+  status.innerText = 'Saving...';
+
+  try{
+    const res = await fetchBackend('saveSetsToMaster',{rows: arr});
+    loader.style.display = 'none';
+    buttons.disabled = false;
+
+    if(res.duplicates && res.duplicates.length>0){
+      let msg="❌ ஏற்கனவே பதிவு செய்யப் பட்டுள்ளது:\n";
+      res.duplicates.forEach(d=>{ msg+=`S.No: ${d.sno}\n`; });
+      showInfo(msg);
+      return;
     }
-  }
 
-  // ------------------ Load Vendors & Library Types ------------------
-  async function loadFilters() {
-    vendors = await fetchJSON(`${backendBaseUrl}?action=getVendors`) || [];
-    libTypes = await fetchJSON(`${backendBaseUrl}?action=getLibraries`) || [];
-
-    const vendorSelect = document.getElementById("vendorFilter");
-    vendorSelect.innerHTML = `<option value="">All</option>` + vendors.map(v=>`<option>${v}</option>`).join("");
-
-    const libSelect = document.getElementById("libTypeFilter");
-    libSelect.innerHTML = `<option value="">All</option>` + libTypes.map(l=>`<option>${l}</option>`).join("");
-
-    const sendLibSelect = document.getElementById("sendLibrarySelect");
-    sendLibSelect.innerHTML = `<option value="">Select Library</option>` + libTypes.map(l=>`<option>${l}</option>`).join("");
-
-    const sendSetSelect = document.getElementById("sendSetSelect");
-    sendSetSelect.innerHTML = `<option value="">Select Set</option><option>SET1</option><option>SET2</option><option>SET3</option>`;
-  }
-
-  // ------------------ Load Distribution Data ------------------
-  async function loadDistribution() {
-    document.getElementById("loading").style.display = "block";
-    const res = await fetchJSON(`${backendBaseUrl}?action=getFilteredResults`);
-    if(res && Array.isArray(res)) {
-      distributionData = res;
-      renderTable();
-    }
-    document.getElementById("loading").style.display = "none";
-  }
-
-  // ------------------ Render Table ------------------
-  function renderTable(sortColumn=null, asc=true) {
-    const tbody = document.querySelector("#booksTable tbody");
-    const vendorVal = document.getElementById("vendorFilter").value.toLowerCase();
-    const libVal = document.getElementById("libTypeFilter").value.toLowerCase();
-    const searchVal = document.getElementById("searchInput").value.toLowerCase();
-
-    let filtered = distributionData.filter(book=>{
-      return (!vendorVal || (book.vendor||"").toLowerCase() === vendorVal) &&
-             (!libVal || (book.libType||"").toLowerCase() === libVal) &&
-             (!searchVal || (book.title||"").toLowerCase().includes(searchVal));
+    arr.forEach(a=>{
+      const row = document.querySelector(`[data-sno="${a.sno}"]`).closest('tr');
+      if(row) row.classList.add('saved');
     });
 
-    if(sortColumn){
-      filtered.sort((a,b)=>{
-        if(a[sortColumn] < b[sortColumn]) return asc? -1:1;
-        if(a[sortColumn] > b[sortColumn]) return asc? 1:-1;
-        return 0;
-      });
-    }
-
-    tbody.innerHTML = filtered.length ? filtered.map(b=>`
-      <tr>
-        <td>${b.sno}</td>
-        <td>${b.title}</td>
-        <td>${b.vendor}</td>
-        <td>${b.libType}</td>
-        <td>${b.libraryName}</td>
-        <td>${b.setValue||""}</td>
-      </tr>
-    `).join("") : `<tr><td colspan='6'>No records found</td></tr>`;
-  }
-
-  // ------------------ Sorting ------------------
-  document.querySelectorAll("#booksTable th").forEach(th=>{
-    let asc = true;
-    th.addEventListener("click", ()=>{
-      const col = th.dataset.column;
-      renderTable(col, asc);
-      asc = !asc;
-    });
-  });
-
-  // ------------------ Generate PDF ------------------
-  document.getElementById("generatePdfBtn").addEventListener("click", async ()=>{
-    const libraryName = document.getElementById("sendLibrarySelect").value;
-    const setValue = document.getElementById("sendSetSelect").value;
-
-    if(!libraryName || !setValue) return alert("Select Library and Set!");
-
-    document.getElementById("pdfResult").innerHTML = "⏳ Generating PDF...";
-    try {
-      const res = await fetchJSON(`${backendBaseUrl}?action=generatePdf&libraryName=${encodeURIComponent(libraryName)}&setValue=${encodeURIComponent(setValue)}`);
-      if(res && res.url){
-        document.getElementById("pdfResult").innerHTML = `<a href="${res.url}" target="_blank">📄 View PDF: ${res.name}</a>`;
-      } else {
-        document.getElementById("pdfResult").innerHTML = "Error generating PDF.";
-      }
-    } catch(err){
-      document.getElementById("pdfResult").innerHTML = "Error: " + err;
-    }
-  });
-
-  // ------------------ Event Listeners ------------------
-  document.getElementById("loadDistributionBtn").addEventListener("click", loadDistribution);
-  document.getElementById("vendorFilter").addEventListener("change", ()=>renderTable());
-  document.getElementById("libTypeFilter").addEventListener("change", ()=>renderTable());
-  document.getElementById("searchInput").addEventListener("input", ()=>renderTable());
-
-  // ------------------ Init ------------------
-  loadFilters();
-</script>
-
-</body>
-</html>
+    const count = res.saved;
+    if(count>0){
+      const audio = new Audio("https
